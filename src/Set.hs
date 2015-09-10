@@ -1,0 +1,130 @@
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+
+module Set where
+
+import           Control.Applicative
+import           Data.List
+import           System.Random
+
+data Count   = Single | Double  | Triple   deriving (Show, Read, Eq, Enum, Bounded, Ord)
+data Pattern = Empty  | Striped | Solid    deriving (Show, Read, Eq, Enum, Bounded, Ord)
+data Color   = Red    | Green   | Purple   deriving (Show, Read, Eq, Enum, Bounded, Ord)
+data Shape   = Pill   | Diamond | Squiggle deriving (Show, Read, Eq, Enum, Bounded, Ord)
+
+data Card = Card { count   :: Count
+                 , pattern :: Pattern
+                 , color   :: Color
+                 , shape   :: Shape
+                 }
+                 deriving (Show, Read, Eq, Bounded, Ord)
+
+--  | nicer would be prop> \(c :: Card) -> toEnum (fromEnum c) == c
+--    but don't want QC dep in main library
+--  prop> \n -> n >= 0 && n < 81 ==> n == fromEnum (toEnum n :: Card)
+instance Enum Card where
+    fromEnum Card{..} = 3 * 3 * 3 * fromEnum count
+                        +   3 * 3 * fromEnum pattern
+                        +       3 * fromEnum color
+                        +           fromEnum shape
+    toEnum n | n < minBound || n > maxBound = error $ show n ++ " out of bounds"
+             | otherwise                    = let (cnt, m)   = n `divMod` 27
+                                                  (pat, o)   = m `divMod` 9
+                                                  (clr, shp) = o `divMod` 3
+                                              in
+                                              Card (toEnum cnt)
+                                                   (toEnum pat)
+                                                   (toEnum clr)
+                                                   (toEnum shp)
+
+-- Bool list of 81 elements for checking - TODO: vector or even bit field
+-- Card list for drawing from
+data Board = Board [Bool] [Card]
+           deriving (Show, Read, Eq)
+
+boardFrom :: [Card] -> Board
+boardFrom cs = Board (mkLookup cs) cs
+
+mkLookup :: [Card] -> [Bool]
+mkLookup = foldl' setter (replicate 81 False)
+  where setter bs c = setAt (fromEnum c) True bs
+
+-- | sets the value at the given index in a list
+setAt :: Int -> a -> [a] -> [a]
+setAt n v vs | n >= length vs || n < 0 = vs
+             | otherwise               = let (pre, _:post)  = splitAt n vs
+                                         in
+                                         pre ++ v : post
+
+-- | Takes two cards and returns the card that would form a valid set with
+--   the given two.
+--   Given the same card twice it will return that same card again, which is
+--   as sensible of an answer as could be expected
+--   >>> thirdOf (Card Double Striped Green Pill) (Card Single Empty Red Pill)
+--   Card {count = Triple, pattern = Solid, color = Purple, shape = Pill}
+thirdOf :: Card -> Card -> Card
+thirdOf Card{..} (Card cnt pat clr shp) = Card (neededDim count   cnt)
+                                               (neededDim pattern pat)
+                                               (neededDim color   clr)
+                                               (neededDim shape   shp)
+
+-- | Takes two values of a dimension of a card - color, shape, etc. - and
+--   returns the value that would complete the set for that dimension
+--   Safe for use on our datatypes here which we know have three inhabitants
+--   Runtime exception for others that happen to be Eq, Enum, and Bounded with
+--   two inhabitants.
+--
+-- >>> neededDim Red Red
+-- Red
+-- >>> neededDim Squiggle Diamond
+-- Pill
+neededDim :: (Eq a, Enum a, Bounded a) => a -> a -> a
+neededDim c c' | c == c'   = c
+               | otherwise = head $ [minBound..] \\ [c, c']
+
+type Set = (Card, Card, Card)
+
+findSets :: Board -> [Set]
+findSets (Board bs (c:cs@(_:_:_))) = match c cs (\card -> bs !! fromEnum card)
+                                       ++ findSets (Board bs cs)
+findSets _                         = []
+
+-- Finds all possible sets using the given card with the given list of
+-- remaining cards and the lookup function to determine if a card exists
+-- (offerring quicker checking)
+match :: Card -> [Card] -> (Card -> Bool) -> [Set]
+match c (c':cs@(_:_)) exists = let third = thirdOf c c'
+                               in
+                               if exists third
+                                 then (c,c',third) : match c cs exists
+                                 else match c cs exists
+match _ _             _      = []
+
+
+-- alternative method
+findSets' :: Board -> [Set]
+findSets' (Board bs cs) = let pairs = (,) <$> cs <*> cs
+                          in
+                          foldr check [] pairs
+  where check (c,c') sets = if exists (thirdOf c c')
+                              then (c, c', thirdOf c c') : sets
+                              else sets
+        exists c = bs !! fromEnum c
+
+-- further alternatives
+-- could keep a record of "needed" cards mapped to the pairs that need them,
+-- and as sets are found and replaced, just look at the new cards to see
+-- what's been. Moves exhaustive work from finding sets to eliminating
+-- cards in between rounds
+
+-- deals a new board, which is (up to, see note below) twelve cards
+deal :: IO Board
+deal = do
+    g <- getStdGen
+    -- nb - may not deal twelve since it might pick duplicates
+    --      would be fixed by a full game setup, with a deck
+    return . boardFrom $
+      map toEnum $ nub $ sort $ take 12 $ randomRs (0, 80) g
+
+-- TODO: a full game, with a deck, removing sets and replacing cards, etc

@@ -1,0 +1,43 @@
+name:                set
+version:             0.1.0.0
+synopsis:            It is Set
+description:         It is Set
+license:             GPL-3
+license-file:        LICENSE
+author:              timmy_tofu
+maintainer:          timmytofu@users.noreply.github.com
+copyright:           ©2015 Tim Adams
+category:            Game
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable set
+  default-language:    Haskell2010
+  hs-source-dirs:      exec
+  main-is:             Main.hs
+  build-depends:       base >=4.7 && <4.8
+
+library
+  default-language:    Haskell2010
+  hs-source-dirs:      src
+  exposed-modules:     Set
+  build-depends:       base      >= 4.7 && < 4.8
+                     , random    >  1   && < 2
+
+test-suite hspec
+  default-language:    Haskell2010
+  hs-source-dirs:      spec
+  main-is:             Spec.hs
+  type:                exitcode-stdio-1.0
+  build-depends:       base                >= 4.7     &&  < 4.8
+                     , hspec               >= 2       && < 2.1
+                     , QuickCheck          >= 2       && < 3
+
+test-suite doctest
+  default-language: Haskell2010
+  hs-source-dirs:   spec, src
+  main-is:          DocTest.hs
+  type:             exitcode-stdio-1.0
+  build-depends:    base
+                  , doctest >= 0.9.11
+                  , Glob    >= 0.7
