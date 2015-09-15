@@ -37,6 +37,7 @@ instance Enum Card where
                                                    (toEnum pat)
                                                    (toEnum clr)
                                                    (toEnum shp)
+    enumFrom c = [c .. maxBound]
 
 -- Bool list of 81 elements for checking - TODO: vector or even bit field
 -- Card list for drawing from
@@ -85,10 +86,12 @@ neededDim c c' | c == c'   = c
 
 type Set = (Card, Card, Card)
 
+-- TODO: Use a Set to avoid explicit uniqing
 findSets :: Board -> [Set]
-findSets (Board bs (c:cs@(_:_:_))) = match c cs (\card -> bs !! fromEnum card)
-                                       ++ findSets (Board bs cs)
-findSets _                         = []
+findSets =  uniq . fs
+  where fs (Board bs (c:cs@(_:_:_))) = match c cs (\card -> bs !! fromEnum card)
+                                         ++ findSets (Board bs cs)
+        fs _                         = []
 
 -- Finds all possible sets using the given card with the given list of
 -- remaining cards and the lookup function to determine if a card exists
@@ -97,18 +100,25 @@ match :: Card -> [Card] -> (Card -> Bool) -> [Set]
 match c (c':cs@(_:_)) exists = let third = thirdOf c c'
                                in
                                if exists third
-                                 then (c,c',third) : match c cs exists
+                                 then setify c c' third : match c cs exists
                                  else match c cs exists
 match _ _             _      = []
 
+setify :: Ord a => a -> a -> a -> (a,a,a)
+setify a b c = (\[x,y,z] -> (x,y,z)) $ sort [a,b,c]
+
+uniq :: Ord a => [a] -> [a]
+uniq = nub . sort
 
 -- alternative method
+-- TODO: Ditto above
 findSets' :: Board -> [Set]
-findSets' (Board bs cs) = let pairs = (,) <$> cs <*> cs
+findSets' (Board bs cs) = let pairs = filter notSame $ (,) <$> cs <*> cs
+                              notSame = uncurry (/=)
                           in
-                          foldr check [] pairs
+                          uniq $ foldr check [] pairs
   where check (c,c') sets = if exists (thirdOf c c')
-                              then (c, c', thirdOf c c') : sets
+                              then setify c c' (thirdOf c c') : sets
                               else sets
         exists c = bs !! fromEnum c
 
