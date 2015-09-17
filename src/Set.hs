@@ -6,6 +6,7 @@ module Set where
 
 import           Control.Applicative
 import           Control.Monad
+import           Control.Monad.State
 import           Control.Monad.ST
 import           Data.Array.ST
 import           Data.List
@@ -47,6 +48,12 @@ instance Enum Card where
 -- Card list for drawing from
 data Board = Board [Bool] [Card]
            deriving (Show, Read, Eq)
+
+type Deck = [Card]
+
+data Game = Game Deck
+
+type Game' = State Game
 
 boardFrom :: [Card] -> Board
 boardFrom cs = Board (mkLookup cs) cs
@@ -132,14 +139,19 @@ findSets' (Board bs cs) = let pairs = filter notSame $ (,) <$> cs <*> cs
 -- what's been. Moves exhaustive work from finding sets to eliminating
 -- cards in between rounds
 
--- | Deals twelve random cards. The deck is currently rebuilt each time, so
--- successive calls to @deal@ may have cards in common. TODO: Game, as below
-deal :: IO Board
-deal = do
+deal' :: Game' Board
+deal' = do
+    Game deck <- get
+    let (brd, cs) = splitAt (min 12 (length deck)) deck
+    put $ Game cs
+    return $ boardFrom brd
+
+newGame' :: IO (Game' ())
+newGame' = do
     g <- getStdGen
     let (cards, g') = fyShuffle [toEnum 0..] g
     setStdGen g'
-    return . boardFrom . take 12 $ cards
+    return $ put (Game cards)
 
 -- | Fisher-Yates shuffle, which also returns the new generator
 fyShuffle :: [a] -> StdGen -> ([a], StdGen)
