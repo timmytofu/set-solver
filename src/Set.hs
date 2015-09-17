@@ -5,7 +5,11 @@
 module Set where
 
 import           Control.Applicative
+import           Control.Monad
+import           Control.Monad.ST
+import           Data.Array.ST
 import           Data.List
+import           Data.STRef
 import           System.Random
 
 data Count   = Single | Double  | Triple   deriving (Show, Read, Eq, Enum, Bounded, Ord)
@@ -128,13 +132,35 @@ findSets' (Board bs cs) = let pairs = filter notSame $ (,) <$> cs <*> cs
 -- what's been. Moves exhaustive work from finding sets to eliminating
 -- cards in between rounds
 
--- deals a new board, which is (up to, see note below) twelve cards
+-- | Deals twelve random cards. The deck is currently rebuilt each time, so
+-- successive calls to @deal@ may have cards in common. TODO: Game, as below
 deal :: IO Board
 deal = do
     g <- getStdGen
-    -- nb - may not deal twelve since it might pick duplicates
-    --      would be fixed by a full game setup, with a deck
-    return . boardFrom $
-      map toEnum $ nub $ sort $ take 12 $ randomRs (0, 80) g
+    let (cards, g') = fyShuffle [toEnum 0..] g
+    setStdGen g'
+    return . boardFrom . take 12 $ cards
+
+-- | Fisher-Yates shuffle, which also returns the new generator
+fyShuffle :: [a] -> StdGen -> ([a], StdGen)
+fyShuffle xs g = runST $ do
+                   gen <- newSTRef g
+                   let randomRST lohi = do
+                         (a,s') <- liftM (randomR lohi) (readSTRef gen)
+                         writeSTRef gen s'
+                         return a
+                   ary <- newAry len xs
+                   xs' <- forM [1..len] $ \i -> do
+                            j <- randomRST (i, len)
+                            vi <- readArray ary i
+                            vj <- readArray ary j
+                            writeArray ary j vi
+                            return vj
+                   gen' <- readSTRef gen
+                   return (xs', gen')
+  where len = length xs
+        newAry n = newListArray (1,n)
+        newAry :: Int -> [a] -> ST s (STArray s Int a)
+
 
 -- TODO: a full game, with a deck, removing sets and replacing cards, etc
