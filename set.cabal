@@ -23,6 +23,7 @@ library
   exposed-modules:     Set
   build-depends:       base      >= 4.7 && < 4.8
                      , array     >  0.5 && < 1
+                     , mtl       >  2   && < 3
                      , random    >  1   && < 2
 
 test-suite hspec
