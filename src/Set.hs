@@ -51,7 +51,7 @@ data Board = Board [Bool] [Card]
 
 type Deck = [Card]
 
-data Game = Game Deck
+data Game = Game Deck Board
 
 type Game' = State Game
 
@@ -141,17 +141,18 @@ findSets' (Board bs cs) = let pairs = filter notSame $ (,) <$> cs <*> cs
 
 deal' :: Game' Board
 deal' = do
-    Game deck <- get
+    Game deck _ <- get
     let (brd, cs) = splitAt (min 12 (length deck)) deck
-    put $ Game cs
-    return $ boardFrom brd
+        board = boardFrom brd
+    put $ Game cs board
+    return board
 
-newGame' :: IO (Game' ())
+newGame' :: IO (Game' Board)
 newGame' = do
     g <- getStdGen
-    let (cards, g') = fyShuffle [toEnum 0..] g
+    let (cards, g')  = fyShuffle [toEnum 0..] g
     setStdGen g'
-    return $ put (Game cards)
+    return $ put (Game cards undefined) >> deal'
 
 -- | Fisher-Yates shuffle, which also returns the new generator
 fyShuffle :: [a] -> StdGen -> ([a], StdGen)
