@@ -147,6 +147,42 @@ deal' = do
     put $ Game cs board
     return board
 
+-- | Removes a set from the current game board if those cards are all in play
+--   Otherwise, no-op
+removeSet :: Set -> Game' ()
+removeSet set = do
+    Game deck board <- get
+    put $ Game deck (rs set board)
+
+-- | Workhorse for @removeSet@
+-- >>> let (Board bs cs)  = rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [0..2]))
+-- >>> filter id bs
+-- []
+-- >>> cs
+-- []
+-- >>> let (Board bs cs)  = rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [2..4]))
+-- >>> filter id bs
+-- [True,True,True]
+-- >>> map fromEnum cs
+-- [2,3,4]
+rs :: Set -> Board -> Board
+rs (c0,c1,c2) b@(Board _ cs) = let removed = cs \\ [c0,c1,c2]
+                               in
+                               if length removed + 3 == length cs
+                                 then boardFrom removed
+                                 else b
+
+-- | Alternative to just calling @boardFrom@ - remove cards from the bool list
+-- prop> \n -> n >= 0 && n < 81 ==> 80 == length (filter id (removeCard (toEnum n) (replicate 81 True)))
+-- >>> removeCard (toEnum 0) [True]
+-- [False]
+-- >>> removeCard (toEnum 1) [True, True]
+-- [True,False]
+removeCard :: Card -> [Bool] -> [Bool]
+removeCard c bs = let (pre,_:post) = splitAt (fromEnum c) bs
+                  in
+                  pre ++ (False : post)
+
 newGame' :: IO (Game' Board)
 newGame' = do
     g <- getStdGen
