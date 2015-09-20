@@ -141,11 +141,34 @@ findSets' (Board bs cs) = let pairs = filter notSame $ (,) <$> cs <*> cs
 
 deal' :: Game' Board
 deal' = do
-    Game deck _ <- get
-    let (brd, cs) = splitAt (min 12 (length deck)) deck
-        board = boardFrom brd
-    put $ Game cs board
-    return board
+    Game deck board <- get
+    let (cards, newDeck) = dealFor board deck
+        newBoard = boardFrom cards
+    put $ Game newDeck newBoard
+    return newBoard
+
+-- | Deals until the board has twelve cards, if there's enough in the deck,
+-- or if the board already has twelve or more cards adds three more if there's
+-- enough in the deck.
+-- TODO: just deal until we know there's a set
+-- >>> let (cs, d) = dealFor (Board undefined (map toEnum [0..11])) (map toEnum [12..14])
+-- >>> map fromEnum cs
+-- [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+-- >>> d
+-- []
+-- >>> let (cs, d) = dealFor (Board undefined (map toEnum [0..5])) (map toEnum [6..14])
+-- >>> map fromEnum cs
+-- [0,1,2,3,4,5,6,7,8,9,10,11]
+-- >>> map fromEnum d
+-- [12,13,14]
+dealFor :: Board -> Deck -> ([Card], Deck)
+dealFor (Board _ cards) deck =
+    let count = if length cards >= 12
+                  then 3
+                  else 12 - length cards
+        (newCards, deckRem) = splitAt (min count (length deck)) deck
+    in
+    (cards ++ newCards, deckRem)
 
 -- | Removes a set from the current game board if those cards are all in play
 --   Otherwise, no-op
