@@ -211,7 +211,7 @@ newGame' = do
     g <- getStdGen
     let (cards, g')  = fyShuffle [toEnum 0..] g
     setStdGen g'
-    return $ put (Game cards undefined) >> deal'
+    return $ put (Game cards (boardFrom [])) >> deal'
 
 -- | Fisher-Yates shuffle, which also returns the new generator
 fyShuffle :: [a] -> StdGen -> ([a], StdGen)
