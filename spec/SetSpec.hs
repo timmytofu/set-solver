@@ -17,9 +17,12 @@ instance Arbitrary Card where
             maxCard = fromEnum (maxBound :: Card)
 
 spec :: Spec
-spec =
+spec = do
     describe "two methods" $ do
       prop "findSet and findSet' find the same sets" $ \cs ->
         let board = boardFrom (uniq cs) -- TODO: avoid uniq with Arbitrary instance for Board
         in
         findSets board == findSets' board
+    describe "card enum isomorphism" $ do
+      prop "Card and Int isomorphic through fromEnum and toEnum" $ \c ->
+        toEnum (fromEnum c) == (c :: Card)

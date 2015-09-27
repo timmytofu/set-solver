@@ -25,9 +25,6 @@ data Card = Card { count   :: Count
                  }
                  deriving (Show, Read, Eq, Bounded, Ord)
 
---  | nicer would be prop> \(c :: Card) -> toEnum (fromEnum c) == c
---    but don't want QC dep in main library
---  prop> \n -> n >= 0 && n < 81 ==> n == fromEnum (toEnum n :: Card)
 instance Enum Card where
     fromEnum Card{..} = 3 * 3 * 3 * fromEnum count
                         +   3 * 3 * fromEnum pattern
