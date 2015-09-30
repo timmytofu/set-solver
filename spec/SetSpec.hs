@@ -32,3 +32,6 @@ spec = do
     describe "card enum isomorphism" $ do
       prop "Card and Int isomorphic through fromEnum and toEnum" $ \c ->
         toEnum (fromEnum c) == (c :: Card)
+    describe "removeCard" $ do
+      prop "Always removes a single card" $ \c ->
+        80 == length (filter id (removeCard c (replicate 81 True)))

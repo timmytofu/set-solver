@@ -198,7 +198,6 @@ rs (c0,c1,c2) b@(Board _ cs) = let removed = cs \\ [c0,c1,c2]
                                  else b
 
 -- | Alternative to just calling @boardFrom@ - remove cards from the bool list
--- prop> \n -> n >= 0 && n < 81 ==> 80 == length (filter id (removeCard (toEnum n) (replicate 81 True)))
 -- >>> removeCard (toEnum 0) [True]
 -- [False]
 -- >>> removeCard (toEnum 1) [True, True]
