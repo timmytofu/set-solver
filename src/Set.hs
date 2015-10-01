@@ -145,21 +145,6 @@ deal' = do
 
 -- | Deals until there are at least 12 cards (if there's enough in the
 -- deck), continuing if there's no set in the new board
--- >>> let (Board _ cs, d) = dealFor (Board [] (map toEnum [0..11])) (map toEnum [12..14])
--- >>> map fromEnum cs
--- [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
--- >>> d
--- []
--- >>> let (Board _ cs, d) = dealFor (Board [] (map toEnum [0..5])) (map toEnum [6..14])
--- >>> map fromEnum cs
--- [0,1,2,3,4,5,6,7,8,9,10,11]
--- >>> map fromEnum d
--- [12,13,14]
--- >>> let (Board _ cs, d) = dealFor (Board [] (map toEnum [1,10,11,20,21,31,33,40,41,50,51,52])) (map toEnum [54,55,73,74])
--- >>> length cs
--- 16
--- >>> d
--- []
 dealFor :: Board -> Deck -> (Board, Deck)
 dealFor (Board _ cards) deck =
     let count = if length cards >= 12
