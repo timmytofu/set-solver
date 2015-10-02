@@ -158,29 +158,31 @@ dealFor (Board _ cards) deck =
       else (newBoard, deckRem)
 
 -- | Removes a set from the current game board if those cards are all in play
---   Otherwise, no-op
-removeSet :: Set -> Game' ()
+--   Otherwise, no-op. Returns the removed (given) set, if it was present.
+removeSet :: Set -> Game' (Maybe Set)
 removeSet set = do
     Game deck board <- get
-    put $ Game deck (rs set board)
+    let (newBoard, removed) = rs set board
+    put $ Game deck newBoard
+    return removed
 
 -- | Workhorse for @removeSet@
--- >>> let (Board bs cs)  = rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [0..2]))
+-- >>> let (Board bs cs) = fst $ rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [0..2]))
 -- >>> filter id bs
 -- []
 -- >>> cs
 -- []
--- >>> let (Board bs cs)  = rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [2..4]))
+-- >>> let (Board bs cs)  = fst $ rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [2..4]))
 -- >>> filter id bs
 -- [True,True,True]
 -- >>> map fromEnum cs
 -- [2,3,4]
-rs :: Set -> Board -> Board
-rs (c0,c1,c2) b@(Board _ cs) = let removed = cs \\ [c0,c1,c2]
-                               in
-                               if length removed + 3 == length cs
-                                 then boardFrom removed
-                                 else b
+rs :: Set -> Board -> (Board, Maybe Set)
+rs set@(c0,c1,c2) b@(Board _ cs) = let removed = cs \\ [c0,c1,c2]
+                                   in
+                                   if length removed + 3 == length cs
+                                     then (boardFrom removed, Just set)
+                                     else (b, Nothing)
 
 -- | Alternative to just calling @boardFrom@ - remove cards from the bool list
 -- >>> removeCard (toEnum 0) [True]
