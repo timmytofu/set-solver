@@ -52,6 +52,8 @@ data Game = Game Deck Board
 
 type Game' = State Game
 
+type GameIO = StateT Game IO
+
 boardFrom :: [Card] -> Board
 boardFrom cs = Board (mkLookup cs) cs
 
@@ -166,6 +168,13 @@ removeSet set = do
     put $ Game deck newBoard
     return removed
 
+removeSet' :: Set -> GameIO (Maybe Set)
+removeSet' set = do
+    Game deck board <- get
+    let (newBoard, removed) = rs set board
+    put $ Game deck newBoard
+    return removed
+
 -- | Workhorse for @removeSet@
 -- >>> let (Board bs cs) = fst $ rs (toEnum 0, toEnum 1, toEnum 2) (boardFrom (map toEnum [0..2]))
 -- >>> filter id bs
@@ -200,6 +209,14 @@ newGame' = do
     let (cards, g')  = fyShuffle [toEnum 0..] g
     setStdGen g'
     return $ put (Game cards (boardFrom [])) >> deal'
+
+getAnswer :: GameIO (Maybe Set)
+getAnswer = do
+    -- Game deck brd <- get
+    c0 <- lift readLn
+    c1 <- lift readLn
+    c2 <- lift readLn
+    removeSet' (c0,c1,c2)
 
 -- | Fisher-Yates shuffle, which also returns the new generator
 fyShuffle :: [a] -> StdGen -> ([a], StdGen)
